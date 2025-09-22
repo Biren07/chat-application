@@ -10,26 +10,40 @@ import { ENV } from "./lib/env.js";
 import { app, server } from "./lib/socket.js";
 
 const __dirname = path.resolve();
-
 const PORT = ENV.PORT || 3000;
 
-app.use(express.json({ limit: "5mb" })); // req.body
-app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
+// --- Middleware --- //
+app.use(express.json({ limit: "5mb" }));
 app.use(cookieParser());
 
+// CORS setup: allow local dev + production frontend
+const allowedOrigins = [
+  "http://localhost:5173",                  // React dev server
+  ENV.CLIENT_URL || "https://your-vercel-frontend.vercel.app", // production frontend
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true, // allow cookies/auth headers
+  })
+);
+
+// --- API Routes --- //
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-// make ready for deployment
+// --- Serve Frontend in Production --- //
 if (ENV.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
   app.get("*", (_, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
   });
 }
 
+// --- Start Server --- //
 server.listen(PORT, () => {
-  console.log("Server running on port: " + PORT);
+  console.log(`Server running on port: ${PORT}`);
   connectDB();
 });
