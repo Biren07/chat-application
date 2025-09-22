@@ -1,23 +1,25 @@
-import { XIcon } from "lucide-react";
+import { XIcon, VideoIcon, PhoneIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { useWebRTC } from "../hooks/useWebRTC";
 
 function ChatHeader() {
   const { selectedUser, setSelectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const isOnline = onlineUsers.includes(selectedUser._id);
 
+  const { startCall } = useWebRTC(); 
+
   useEffect(() => {
     const handleEscKey = (event) => {
       if (event.key === "Escape") setSelectedUser(null);
     };
-
     window.addEventListener("keydown", handleEscKey);
-
-    // cleanup function
     return () => window.removeEventListener("keydown", handleEscKey);
   }, [setSelectedUser]);
+
+  if (!selectedUser) return null;
 
   return (
     <div
@@ -27,7 +29,10 @@ function ChatHeader() {
       <div className="flex items-center space-x-3">
         <div className={`avatar ${isOnline ? "online" : "offline"}`}>
           <div className="w-12 rounded-full">
-            <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullName} />
+            <img
+              src={selectedUser.profilePic || "/avatar.png"}
+              alt={selectedUser.fullName}
+            />
           </div>
         </div>
 
@@ -37,10 +42,33 @@ function ChatHeader() {
         </div>
       </div>
 
-      <button onClick={() => setSelectedUser(null)}>
-        <XIcon className="w-5 h-5 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" />
-      </button>
+      <div className="flex items-center gap-3">
+    
+        <button
+          disabled={!isOnline}
+          onClick={() => startCall(selectedUser._id, "video")}
+          className="p-2 rounded-full hover:bg-slate-700 transition-colors"
+          title="Video Call"
+        >
+          <VideoIcon className="w-5 h-5 text-slate-200" />
+        </button>
+
+        <button
+          disabled={!isOnline}
+          onClick={() => startCall(selectedUser._id, "voice")}
+          className="p-2 rounded-full hover:bg-slate-700 transition-colors"
+          title="Voice Call"
+        >
+          <PhoneIcon className="w-5 h-5 text-slate-200" />
+        </button>
+
+    
+        <button onClick={() => setSelectedUser(null)}>
+          <XIcon className="w-5 h-5 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" />
+        </button>
+      </div>
     </div>
   );
 }
+
 export default ChatHeader;

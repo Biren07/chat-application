@@ -5,8 +5,10 @@ import SignUpPage from "./pages/SignUpPage";
 import { useAuthStore } from "./store/useAuthStore";
 import { useEffect } from "react";
 import PageLoader from "./components/PageLoader";
-
 import { Toaster } from "react-hot-toast";
+
+// ✅ Import VideoCall component
+import VideoCall from "./components/VideoCall";
 
 function App() {
   const { checkAuth, isCheckingAuth, authUser } = useAuthStore();
@@ -30,8 +32,12 @@ function App() {
         <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to={"/"} />} />
       </Routes>
 
+      {/* ✅ VideoCall overlay */}
+      <VideoCall />
+
       <Toaster />
     </div>
   );
 }
+
 export default App;
