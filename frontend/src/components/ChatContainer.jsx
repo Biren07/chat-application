@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
@@ -15,14 +15,17 @@ function ChatContainer() {
     subscribeToMessages,
     unsubscribeFromMessages,
   } = useChatStore();
-  const { authUser } = useAuthStore();
+
+  const { authUser, socket } = useAuthStore();
   const messageEndRef = useRef(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
+    if (!selectedUser?._id) return;
+
     getMessagesByUserId(selectedUser._id);
     subscribeToMessages();
 
-    // clean up
     return () => unsubscribeFromMessages();
   }, [selectedUser, getMessagesByUserId, subscribeToMessages, unsubscribeFromMessages]);
 
@@ -31,6 +34,24 @@ function ChatContainer() {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+
+  useEffect(() => {
+    if (!socket || !selectedUser?._id) return;
+
+    socket.on("userTyping", ({ senderId }) => {
+      if (senderId === selectedUser._id) setIsTyping(true);
+    });
+
+    socket.on("userStopTyping", ({ senderId }) => {
+      if (senderId === selectedUser._id) setIsTyping(false);
+    });
+
+    return () => {
+      socket.off("userTyping");
+      socket.off("userStopTyping");
+    };
+  }, [socket, selectedUser]);
 
   return (
     <>
@@ -63,13 +84,21 @@ function ChatContainer() {
                 </div>
               </div>
             ))}
-            {/* 👇 scroll target */}
+
+            {isTyping && (
+              <div className="chat chat-start">
+                <div className="chat-bubble bg-slate-700 text-slate-300 mb-10">
+                  Typing<span className="dot-typing ml-1">...</span>
+                </div>
+              </div>
+            )}
+
             <div ref={messageEndRef} />
           </div>
         ) : isMessagesLoading ? (
           <MessagesLoadingSkeleton />
         ) : (
-          <NoChatHistoryPlaceholder name={selectedUser.fullName} />
+          <NoChatHistoryPlaceholder name={selectedUser?.fullName} />
         )}
       </div>
 

@@ -1,17 +1,22 @@
 import { useRef, useState } from "react";
 import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 import toast from "react-hot-toast";
-import { ImageIcon, SendIcon, XIcon } from "lucide-react";
+import { ImageIcon, SendIcon, XIcon, SmileIcon } from "lucide-react";
+import EmojiPicker from "emoji-picker-react";
 
 function MessageInput() {
   const { playRandomKeyStrokeSound } = useKeyboardSound();
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState(null);
 
   const fileInputRef = useRef(null);
 
-  const { sendMessage, isSoundEnabled } = useChatStore();
+  const { sendMessage, isSoundEnabled, selectedUser } = useChatStore();
+  const { authUser, socket } = useAuthStore();
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -22,8 +27,15 @@ function MessageInput() {
       text: text.trim(),
       image: imagePreview,
     });
+
+  
+    if (selectedUser?._id && socket) {
+      socket.emit("stopTyping", { receiverId: selectedUser._id });
+    }
+
     setText("");
-    setImagePreview("");
+    setImagePreview(null);
+    setShowEmojiPicker(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -44,8 +56,30 @@ function MessageInput() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleEmojiClick = (emojiObject) => {
+    setText((prev) => prev + emojiObject.emoji);
+  };
+
+  
+  const handleTyping = (value) => {
+    setText(value);
+    if (isSoundEnabled) playRandomKeyStrokeSound();
+
+    if (!selectedUser?._id || !socket) return;
+
+    socket.emit("typing", { receiverId: selectedUser._id });
+
+    if (typingTimeout) clearTimeout(typingTimeout);
+
+    const timeout = setTimeout(() => {
+      socket.emit("stopTyping", { receiverId: selectedUser._id });
+    }, 2000);
+
+    setTypingTimeout(timeout);
+  };
+
   return (
-    <div className="p-4 border-t border-slate-700/50">
+    <div className="p-4 border-t border-slate-700/50 relative">
       {imagePreview && (
         <div className="max-w-3xl mx-auto mb-3 flex items-center">
           <div className="relative">
@@ -69,13 +103,26 @@ function MessageInput() {
         <input
           type="text"
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            isSoundEnabled && playRandomKeyStrokeSound();
-          }}
+          onChange={(e) => handleTyping(e.target.value)}
           className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
           placeholder="Type your message..."
         />
+
+        <div className="relative p-2">
+          <button
+            type="button"
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            className="bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-3 transition-colors"
+          >
+            <SmileIcon className="w-5 h-5" />
+          </button>
+
+          {showEmojiPicker && (
+            <div className="absolute bottom-12 right-0 z-50">
+              <EmojiPicker onEmojiClick={handleEmojiClick} height={300} width={300} />
+            </div>
+          )}
+        </div>
 
         <input
           type="file"
@@ -84,7 +131,6 @@ function MessageInput() {
           onChange={handleImageChange}
           className="hidden"
         />
-
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -94,6 +140,7 @@ function MessageInput() {
         >
           <ImageIcon className="w-5 h-5" />
         </button>
+
         <button
           type="submit"
           disabled={!text.trim() && !imagePreview}
@@ -105,4 +152,5 @@ function MessageInput() {
     </div>
   );
 }
+
 export default MessageInput;
