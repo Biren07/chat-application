@@ -19,7 +19,7 @@ app.use(cookieParser());
 // CORS setup: allow local dev + production frontend
 const allowedOrigins = [
   "http://localhost:5173",                  // React dev server
-  ENV.CLIENT_URL || "https://your-vercel-frontend.vercel.app", // production frontend
+  ENV.CLIENT_URL || "https://chat-application-five-bice.vercel.app", // production frontend
 ];
 
 app.use(
