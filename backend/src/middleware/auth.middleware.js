@@ -4,10 +4,7 @@ import { ENV } from "../lib/env.js";
 
 export const protectRoute = async (req, res, next) => {
   try {
-    console.log("Authorization ",req.header["Authorization"])
-    const token = req.cookies?.token ||
-        req.header("Authorization")?.replace("Bearer ", "").trim();
-    
+    const token = req.cookies.jwt;
     if (!token) return res.status(401).json({ message: "Unauthorized - No token provided" });
 
     const decoded = jwt.verify(token, ENV.JWT_SECRET);
