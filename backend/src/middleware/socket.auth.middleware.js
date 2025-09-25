@@ -4,11 +4,24 @@ import { ENV } from "../lib/env.js";
 
 export const socketAuthMiddleware = async (socket, next) => {
   try {
-    // extract token from http-only cookies
-    const token = socket.handshake.headers.cookie
-      ?.split("; ")
-      .find((row) => row.startsWith("jwt="))
-      ?.split("=")[1];
+    let token;
+
+    // 1. Check cookie
+    const cookieHeader = socket.handshake.headers.cookie;
+    if (cookieHeader) {
+      token = cookieHeader
+        .split("; ")
+        .find((row) => row.startsWith("jwt="))
+        ?.split("=")[1];
+    }
+
+    // 2. If not found in cookies, check Authorization header
+    if (!token && socket.handshake.headers.authorization) {
+      const authHeader = socket.handshake.headers.authorization;
+      if (authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
+      }
+    }
 
     if (!token) {
       console.log("Socket connection rejected: No token provided");
@@ -22,7 +35,7 @@ export const socketAuthMiddleware = async (socket, next) => {
       return next(new Error("Unauthorized - Invalid Token"));
     }
 
-    // find the user fromdb
+    // find the user in db
     const user = await User.findById(decoded.userId).select("-password");
     if (!user) {
       console.log("Socket connection rejected: User not found");
@@ -33,7 +46,7 @@ export const socketAuthMiddleware = async (socket, next) => {
     socket.user = user;
     socket.userId = user._id.toString();
 
-    console.log(`Socket authenticated for user: ${user.fullName} (${user._id})`);
+    console.log(`✅ Socket authenticated: ${user.fullName} (${user._id})`);
 
     next();
   } catch (error) {
