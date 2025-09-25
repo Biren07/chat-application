@@ -33,6 +33,12 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
+// --- Start Server --- //
+server.listen(PORT, () => {
+  console.log(`Server running on port: ${PORT}`);
+  connectDB();
+});
+
 // --- Serve Frontend in Production --- //
 if (ENV.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
@@ -42,8 +48,4 @@ if (ENV.NODE_ENV === "production") {
   });
 }
 
-// --- Start Server --- //
-server.listen(PORT, () => {
-  console.log(`Server running on port: ${PORT}`);
-  connectDB();
-});
+
