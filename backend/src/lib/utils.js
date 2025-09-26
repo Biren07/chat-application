@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { ENV } from "./env.js";
 
+
 export const generateToken = (userId, res) => {
   const { JWT_SECRET } = ENV;
   if (!JWT_SECRET) {
@@ -12,14 +13,10 @@ export const generateToken = (userId, res) => {
   });
 
   res.cookie("jwt", token, {
-    httpOnly: true, 
-    maxAge: 7 * 24 * 60 * 60 * 1000, 
-    sameSite: ENV.NODE_ENV === "development" ? "Lax" : "None", 
-    secure: ENV.NODE_ENV !== "development",
-    path: "/",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // MS
+    httpOnly: true, // prevent XSS attacks: cross-site scripting
+    sameSite:ENV.NODE_ENV === "development" ? "Lax" : "None", // CSRF attacks
+    secure: ENV.NODE_ENV === "development" ? false : true,
   });
-
-  return res.status(200).json({
-    message: "Authentication successful",
-  });
+  return token;
 };
