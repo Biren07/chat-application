@@ -12,14 +12,14 @@ export const generateToken = (userId, res) => {
   });
 
   res.cookie("jwt", token, {
-    maxAge: 7 * 24 * 60 * 60 * 1000, // MS
-    httpOnly: true, // prevent XSS attacks: cross-site scripting
-    sameSite: "None", // CSRF attacks
-    secure: ENV.NODE_ENV === "development" ? false : true,
+    httpOnly: true, 
+    maxAge: 7 * 24 * 60 * 60 * 1000, 
+    sameSite: ENV.NODE_ENV === "development" ? "Lax" : "None", 
+    secure: ENV.NODE_ENV !== "development",
+    path: "/",
   });
 
-  return token;
+  return res.status(200).json({
+    message: "Authentication successful",
+  });
 };
-
-// http://localhost
-// https://dsmakmk.com

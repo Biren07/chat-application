@@ -18,22 +18,17 @@ app.use(cookieParser());
 
 // CORS setup: allow local dev + production frontend
 const allowedOrigins = [
-  "http://localhost:5173", 
-  ENV.CLIENT_URL || "https://chat-application-five-bice.vercel.app",
+  "http://localhost:5173",                  // React dev server
+  ENV.CLIENT_URL || "https://chat-application-five-bice.vercel.app", // production frontend
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
+    origin: allowedOrigins,
+    credentials: true, // allow cookies/auth headers
   })
 );
+
 // --- API Routes --- //
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
