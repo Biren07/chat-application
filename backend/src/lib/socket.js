@@ -14,105 +14,29 @@ const io = new Server(server, {
   },
 });
 
-// Store online users
-const userSocketMap = {}; // {userId: socketId}
-
-// Apply authentication middleware
+// apply authentication middleware to all socket connections
 io.use(socketAuthMiddleware);
 
-// Helper to get a user's socket ID
+// we will use this function to check if the user is online or not
 export function getReceiverSocketId(userId) {
   return userSocketMap[userId];
 }
 
-io.on("connection", (socket) => {
-  const userId = socket.userId;
-  console.log("User connected:", socket.user.fullName);
+// this is for storig online users
+const userSocketMap = {}; // {userId:socketId}
 
-  // Add user to online list
+io.on("connection", (socket) => {
+  console.log("A user connected", socket.user.fullName);
+
+  const userId = socket.userId;
   userSocketMap[userId] = socket.id;
 
-  // Emit online users to all clients
+  // io.emit() is used to send events to all connected clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
-  // ---------------- TYPING INDICATOR ----------------
-  socket.on("typing", ({ receiverId }) => {
-    const receiverSocketId = userSocketMap[receiverId];
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("userTyping", { senderId: userId });
-    }
-  });
-
-  socket.on("stopTyping", ({ receiverId }) => {
-    const receiverSocketId = userSocketMap[receiverId];
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("userStopTyping", { senderId: userId });
-    }
-  });
-
-  // ---------------- MESSAGE REACTIONS ----------------
-  socket.on("reaction", ({ messageId, emoji }) => {
-    io.emit("reactionUpdated", { messageId, emoji, userId });
-  });
-
-  // ---------------- VOICE & VIDEO CALLS ----------------
-  socket.on("startCall", ({ receiverId, type }) => {
-    const receiverSocketId = userSocketMap[receiverId];
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("incomingCall", {
-        callerId: userId,
-        callerName: socket.user.fullName,
-        type, // "video" or "voice"
-      });
-    }
-  });
-
-  socket.on("acceptCall", ({ callerId }) => {
-    const callerSocketId = userSocketMap[callerId];
-    if (callerSocketId) {
-      io.to(callerSocketId).emit("callAccepted", { receiverId: userId });
-    }
-  });
-
-  socket.on("rejectCall", ({ callerId }) => {
-    const callerSocketId = userSocketMap[callerId];
-    if (callerSocketId) {
-      io.to(callerSocketId).emit("callRejected", { receiverId: userId });
-    }
-  });
-
-  socket.on("endCall", ({ otherUserId }) => {
-    const otherSocketId = userSocketMap[otherUserId];
-    if (otherSocketId) {
-      io.to(otherSocketId).emit("callEnded", { userId });
-    }
-  });
-
-  // ---------------- WEBRTC SIGNALING ----------------
-  socket.on("webrtcOffer", ({ receiverId, offer }) => {
-    const receiverSocketId = userSocketMap[receiverId];
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("webrtcOffer", { senderId: userId, offer });
-    }
-  });
-
-  socket.on("webrtcAnswer", ({ receiverId, answer }) => {
-    const receiverSocketId = userSocketMap[receiverId];
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("webrtcAnswer", { senderId: userId, answer });
-    }
-  });
-
-  socket.on("iceCandidate", ({ receiverId, candidate }) => {
-    const receiverSocketId = userSocketMap[receiverId];
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("iceCandidate", { senderId: userId, candidate });
-    }
-  });
-
-  // ---------------- DISCONNECT ----------------
+  // with socket.on we listen for events from clients
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.user.fullName);
+    console.log("A user disconnected", socket.user.fullName);
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });

@@ -10,42 +10,26 @@ import { ENV } from "./lib/env.js";
 import { app, server } from "./lib/socket.js";
 
 const __dirname = path.resolve();
-const PORT = ENV.PORT || 5000;
 
-// --- Middleware --- //
-app.use(express.json({ limit: "5mb" }));
+const PORT = ENV.PORT || 3000;
+
+app.use(express.json({ limit: "5mb" })); // req.body
+app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
 app.use(cookieParser());
 
-// CORS setup: allow local dev + production frontend
-const allowedOrigins = [
-  "http://localhost:5173",                  // React dev server
-  ENV.CLIENT_URL || "https://chat-application-five-bice.vercel.app", // production frontend
-];
-
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true, // allow cookies/auth headers
-  })
-);
-
-// --- API Routes --- //
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-// --- Start Server --- //
-server.listen(PORT, () => {
-  console.log(`Server running on port: ${PORT}`);
-  connectDB();
-});
-
-// --- Serve Frontend in Production --- //
+// make ready for deployment
 if (ENV.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
   app.get("*", (_, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
+    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
   });
 }
 
-
+server.listen(PORT, () => {
+  console.log("Server running on port: " + PORT);
+  connectDB();
+});

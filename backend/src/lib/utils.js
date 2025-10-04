@@ -1,9 +1,8 @@
 import jwt from "jsonwebtoken";
 import { ENV } from "./env.js";
 
-
 export const generateToken = (userId, res) => {
-  const { JWT_SECRET } = ENV;
+  const { JWT_SECRET, NODE_ENV } = ENV;
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured");
   }
@@ -12,11 +11,15 @@ export const generateToken = (userId, res) => {
     expiresIn: "7d",
   });
 
+  // Determine if we are on localhost or production
+  const isLocalhost = NODE_ENV === "development";
+
   res.cookie("jwt", token, {
-    maxAge: 7 * 24 * 60 * 60 * 1000, // MS
-    httpOnly: true, // prevent XSS attacks: cross-site scripting
-    sameSite:ENV.NODE_ENV === "development" ? "Lax" : "None", // CSRF attacks
-    secure: ENV.NODE_ENV === "development" ? false : true,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    httpOnly: true,                  // prevent JS access
+    secure: !isLocalhost,            // true in production (HTTPS), false in localhost
+    sameSite: "None",                // allow cross-site cookie
   });
+
   return token;
 };
