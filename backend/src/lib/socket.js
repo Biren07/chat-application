@@ -1,45 +1,43 @@
-import { Server } from "socket.io";
-import http from "http";
-import express from "express";
-import { ENV } from "./env.js";
-import { socketAuthMiddleware } from "../middleware/socket.auth.middleware.js";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
+import { ENV } from "../lib/env.js";
 
-const app = express();
-const server = http.createServer(app);
+export const socketAuthMiddleware = async (socket, next) => {
+  try {
+    // extract token from http-only cookies
+    const token = socket.handshake.headers.cookie
+      ?.split("; ")
+      .find((row) => row.startsWith("jwt="))
+      ?.split("=")[1];
 
-const io = new Server(server, {
-  cors: {
-    origin: [ENV.CLIENT_URL],
-    credentials: true,
-  },
-});
+    if (!token) {
+      console.log("Socket connection rejected: No token provided");
+      return next(new Error("Unauthorized - No Token Provided"));
+    }
 
-// apply authentication middleware to all socket connections
-// io.use(socketAuthMiddleware);
+    // verify the token
+    const decoded = jwt.verify(token, ENV.JWT_SECRET);
+    if (!decoded) {
+      console.log("Socket connection rejected: Invalid token");
+      return next(new Error("Unauthorized - Invalid Token"));
+    }
 
-// we will use this function to check if the user is online or not
-export function getReceiverSocketId(userId) {
-  return userSocketMap[userId];
-}
+    // find the user fromdb
+    const user = await User.findById(decoded.userId).select("-password");
+    if (!user) {
+      console.log("Socket connection rejected: User not found");
+      return next(new Error("User not found"));
+    }
 
-// this is for storig online users
-const userSocketMap = {}; // {userId:socketId}
+    // attach user info to socket
+    socket.user = user;
+    socket.userId = user._id.toString();
 
-io.on("connection", (socket) => {
-  console.log("A user connected", socket.user.fullName);
+    console.log(`Socket authenticated for user: ${user.fullName} (${user._id})`);
 
-  const userId = socket.userId;
-  userSocketMap[userId] = socket.id;
-
-  // io.emit() is used to send events to all connected clients
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
-
-  // with socket.on we listen for events from clients
-  socket.on("disconnect", () => {
-    console.log("A user disconnected", socket.user.fullName);
-    delete userSocketMap[userId];
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
-  });
-});
-
-export { io, app, server };
+    next();
+  } catch (error) {
+    console.log("Error in socket authentication:", error.message);
+    next(new Error("Unauthorized - Authentication failed"));
+  }
+};
