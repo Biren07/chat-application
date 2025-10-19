@@ -11,7 +11,6 @@ export const generateToken = (userId, res) => {
     expiresIn: "7d",
   });
 
-  // Determine if we are on localhost or production
   const isLocalhost = NODE_ENV === "development";
 
   res.cookie("jwt", token, {
