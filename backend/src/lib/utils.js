@@ -11,13 +11,14 @@ export const generateToken = (userId, res) => {
     expiresIn: "7d",
   });
 
-  const isLocalhost = NODE_ENV === "development";
+  const isDev = NODE_ENV === "development";
 
   res.cookie("jwt", token, {
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    httpOnly: true,                  // prevent JS access
-    secure: !isLocalhost,            // true in production (HTTPS), false in localhost
-    sameSite: "None",                // allow cross-site cookie
+    httpOnly: true,
+    secure: !isDev,                 // ✅ HTTPS only in production
+    sameSite: isDev ? "Lax" : "None", // ✅ "None" for cross-site (Vercel <-> Render)
+    path: "/",                       // ✅ ensures cookie is sent for all routes
   });
 
   return token;
