@@ -16,8 +16,7 @@ const PORT = ENV.PORT || 3000;
 
 app.use(express.json({ limit: "5mb" })); // req.body
 const allowedOrigins = [
-  "http://localhost:5173",  
-  "https://chat-application-sage-eta.vercel.app/"
+  "http://localhost:5173",
 ];
 
 app.use(cors({
